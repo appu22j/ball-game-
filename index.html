@@ -3,629 +3,546 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Temple Bot Run</title>
+    <title>Candy Match Saga</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            margin: 0;
-            padding: 0;
+            font-family: 'Nunito', sans-serif;
+            background: radial-gradient(circle, #6a11cb 0%, #2575fc 100%);
+            touch-action: none;
             overflow: hidden;
-            background-color: #1a1a1a;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: none; /* Prevent browser scrolling */
-        }
-
-        #gameContainer {
-            position: relative;
-            width: 100vw;
             height: 100vh;
             display: flex;
-            justify-content: center;
             align-items: center;
-            background: #2b3a42;
+            justify-content: center;
         }
 
-        canvas {
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            max-width: 100%;
-            max-height: 100%;
-        }
+        .candy-font { font-family: 'Fredoka One', cursive; }
 
-        /* UI Overlay Layer */
-        #uiLayer {
-            position: absolute;
-            top: 0;
-            left: 0;
+        #game-container {
+            position: relative;
             width: 100%;
-            height: 100%;
-            pointer-events: none;
+            max-width: 500px;
+            aspect-ratio: 9/16;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(15px);
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-radius: 40px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            overflow: hidden;
         }
 
-        .hud-panel {
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            color: white;
-            font-weight: bold;
-            text-shadow: 2px 2px 0 #000;
-            font-size: 24px;
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: 6px;
+            padding: 12px;
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            margin: 12px;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
         }
 
-        #scoreBoard {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-        }
-
-        /* Menus */
-        .menu {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.85);
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            color: white;
-            border: 2px solid #ffd700;
-            pointer-events: auto;
-            min-width: 250px;
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
-            display: none; /* Hidden by default */
-        }
-
-        .menu h1 {
-            margin: 0 0 10px 0;
-            font-size: 32px;
-            color: #ffd700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .menu p {
-            font-size: 16px;
-            color: #ccc;
-            margin-bottom: 25px;
-        }
-
-        button {
-            background: linear-gradient(to bottom, #ffd700, #ffa500);
-            border: none;
-            padding: 15px 30px;
-            font-size: 20px;
-            font-weight: bold;
-            color: #3e2723;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform 0.1s;
+        .cell {
+            position: relative;
             width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        button:active {
-            transform: scale(0.95);
+        .candy {
+            width: 95%;
+            height: 95%;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+            user-select: none;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
         }
 
-        #startScreen { display: block; }
-        
-        .tutorial-icon {
-            font-size: 30px;
-            margin: 10px;
-            display: inline-block;
+        .candy.selected {
+            transform: scale(1.15) rotate(5deg);
+            filter: brightness(1.2) drop-shadow(0 0 15px #fff);
+            z-index: 20;
         }
-        
-        /* Mobile specific adjustments */
-        @media (max-width: 600px) {
-            .hud-panel { font-size: 18px; padding: 15px; }
-            .menu { width: 80%; }
+
+        .candy.hint {
+            animation: pulse-glow 1s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            from { transform: scale(1); filter: brightness(1); }
+            to { transform: scale(1.1); filter: brightness(1.4); }
+        }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+            z-index: 30;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        #overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 7, 34, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            transition: opacity 0.3s;
+        }
+
+        .hidden { display: none !important; }
+
+        .progress-bar {
+            height: 16px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 8px;
+            overflow: hidden;
+            width: 100%;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f2fe, #4facfe);
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 0 10px #4facfe;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
     </style>
 </head>
 <body>
 
-<div id="gameContainer">
-    <canvas id="gameCanvas"></canvas>
-    
-    <div id="uiLayer">
-        <div id="scoreBoard" class="hud-panel">
-            <div id="scoreDisplay">SCORE: 0</div>
-            <div id="coinDisplay">🪙 0</div>
-        </div>
-    </div>
-
-    <!-- Start Screen -->
-    <div id="startScreen" class="menu">
-        <h1>Temple Bot</h1>
-        <p>Run as far as you can!</p>
-        <div style="margin-bottom: 20px; font-size: 14px; color: #aaa;">
-            <div>⬆️ Swipe Up to Jump</div>
-            <div>⬇️ Swipe Down to Slide</div>
-            <div>⬅️➡️ Swipe to Move</div>
-        </div>
-        <button onclick="startGame()">RUN!</button>
-    </div>
-
-    <!-- Game Over Screen -->
-    <div id="gameOverScreen" class="menu">
-        <h1>CRASHED!</h1>
-        <p id="finalScore">Score: 0</p>
-        <button onclick="resetGame()">TRY AGAIN</button>
-    </div>
-</div>
-
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    // Game State
-    let gameRunning = false;
-    let score = 0;
-    let coins = 0;
-    let speed = 0;
-    let distance = 0;
-    let lastTime = 0;
-    let frameCount = 0;
-
-    // Constants
-    const BASE_SPEED = 400; // Pixels per second
-    const MAX_SPEED = 900;
-    const LANE_COUNT = 3;
-    let LANE_WIDTH = 0; // Calculated on resize
-    
-    // Assets (Using Emoji drawing for simplicity and self-containment)
-    const ASSETS = {
-        player: '🤖',
-        coin: '🪙',
-        log: '🪵', // Jump over
-        arch: '⛩️', // Slide under
-        fire: '🔥', // Dodge (change lane)
-        wall: '🗿', // Dodge
-        bg: '#3e2723',
-        laneDark: '#4e342e',
-        laneLight: '#5d4037'
-    };
-
-    // Entities
-    let player = {
-        lane: 1, // 0, 1, 2
-        y: 0, // Set in resize
-        targetX: 0,
-        x: 0,
-        width: 50,
-        height: 50,
-        z: 0, // Vertical height (jump)
-        isJumping: false,
-        isSliding: false,
-        jumpVel: 0,
-        slideTimer: 0
-    };
-
-    let obstacles = [];
-    let particles = [];
-
-    // --- Core Engine ---
-
-    function resize() {
-        // Handle full screen vertical aspect ratio preference
-        const container = document.getElementById('gameContainer');
-        const aspect = container.clientWidth / container.clientHeight;
-        
-        // Limit max width for gameplay sanity on desktop
-        let w = container.clientWidth;
-        let h = container.clientHeight;
-        
-        // On very wide screens, restrict width to mimic mobile
-        if (w > 600) {
-            w = 500; 
-        }
-
-        canvas.width = w;
-        canvas.height = h;
-        
-        LANE_WIDTH = w / LANE_COUNT;
-        
-        // Reset player visual pos
-        player.y = h - 150;
-        player.width = LANE_WIDTH * 0.6;
-        player.height = player.width;
-        
-        // Snap player to current lane immediately
-        player.targetX = (player.lane * LANE_WIDTH) + (LANE_WIDTH / 2);
-        if (!gameRunning) player.x = player.targetX;
-    }
-
-    window.addEventListener('resize', resize);
-    resize();
-
-    function startGame() {
-        document.getElementById('startScreen').style.display = 'none';
-        document.getElementById('gameOverScreen').style.display = 'none';
-        
-        // Reset Stats
-        gameRunning = true;
-        score = 0;
-        coins = 0;
-        speed = BASE_SPEED;
-        distance = 0;
-        obstacles = [];
-        particles = [];
-        
-        // Reset Player
-        player.lane = 1;
-        player.z = 0;
-        player.isJumping = false;
-        player.isSliding = false;
-        player.x = (player.lane * LANE_WIDTH) + (LANE_WIDTH / 2);
-        player.targetX = player.x;
-
-        lastTime = performance.now();
-        requestAnimationFrame(gameLoop);
-    }
-
-    function gameOver() {
-        gameRunning = false;
-        document.getElementById('finalScore').innerText = `Score: ${Math.floor(score)} | Coins: ${coins}`;
-        document.getElementById('gameOverScreen').style.display = 'block';
-    }
-
-    function resetGame() {
-        startGame();
-    }
-
-    // --- Input Handling ---
-
-    // Keyboard
-    window.addEventListener('keydown', (e) => {
-        if (!gameRunning) return;
-        if (e.key === 'ArrowLeft') changeLane(-1);
-        if (e.key === 'ArrowRight') changeLane(1);
-        if (e.key === 'ArrowUp') jump();
-        if (e.key === 'ArrowDown') slide();
-    });
-
-    // Touch / Swipe
-    let touchStartX = 0;
-    let touchStartY = 0;
-
-    canvas.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
-    }, {passive: false});
-
-    canvas.addEventListener('touchend', (e) => {
-        if (!gameRunning) return;
-        
-        let touchEndX = e.changedTouches[0].screenX;
-        let touchEndY = e.changedTouches[0].screenY;
-        
-        handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
-    }, {passive: false});
-
-    function handleSwipe(x1, y1, x2, y2) {
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const absDx = Math.abs(dx);
-        const absDy = Math.abs(dy);
-
-        if (Math.max(absDx, absDy) < 30) return; // Tap / too short
-
-        if (absDx > absDy) {
-            // Horizontal
-            if (dx > 0) changeLane(1);
-            else changeLane(-1);
-        } else {
-            // Vertical
-            if (dy < 0) jump();
-            else slide();
-        }
-    }
-
-    // Actions
-    function changeLane(dir) {
-        if (player.lane + dir >= 0 && player.lane + dir < LANE_COUNT) {
-            player.lane += dir;
-            player.targetX = (player.lane * LANE_WIDTH) + (LANE_WIDTH / 2);
-        }
-    }
-
-    function jump() {
-        if (!player.isJumping && !player.isSliding) {
-            player.isJumping = true;
-            player.jumpVel = -15; // Initial upward velocity
-        }
-    }
-
-    function slide() {
-        if (!player.isJumping && !player.isSliding) {
-            player.isSliding = true;
-            player.slideTimer = 0.8; // Seconds sliding
-        } else if (player.isJumping) {
-            // Fast fall
-            player.jumpVel = 20;
-        }
-    }
-
-    // --- Game Logic ---
-
-    function spawnObstacle() {
-        // Lane selection: Prefer lanes that aren't completely blocked recently
-        // Simple random for now
-        const lane = Math.floor(Math.random() * LANE_COUNT);
-        
-        const typeRoll = Math.random();
-        let type = 'wall';
-        
-        // 40% Coins, 20% Logs, 20% Arches, 20% Walls/Fire
-        if (typeRoll < 0.3) type = 'coin';
-        else if (typeRoll < 0.5) type = 'log'; // Jump
-        else if (typeRoll < 0.7) type = 'arch'; // Slide
-        else if (typeRoll < 0.85) type = 'fire'; // Dodge
-        else type = 'wall'; // Dodge
-
-        // If coin, maybe spawn a pattern? Just single for now
-        obstacles.push({
-            type: type,
-            lane: lane,
-            x: (lane * LANE_WIDTH) + (LANE_WIDTH / 2),
-            y: -100, // Start above screen
-            width: LANE_WIDTH * 0.5,
-            height: LANE_WIDTH * 0.5,
-            collected: false
-        });
-    }
-
-    function update(dt) {
-        // Increase speed slowly
-        if (speed < MAX_SPEED) speed += dt * 5;
-        
-        distance += speed * dt;
-        score += (speed * dt) * 0.01;
-
-        // Player movement (Lerp X)
-        player.x += (player.targetX - player.x) * 15 * dt;
-
-        // Player Jump Physics
-        if (player.isJumping) {
-            player.z += player.jumpVel * dt * 60; // Scale by frame reference
-            player.jumpVel += 0.8 * dt * 60; // Gravity
-
-            if (player.z > 0) {
-                player.z = 0;
-                player.isJumping = false;
-                player.jumpVel = 0;
-                createParticles(player.x, player.y + 40, '#8d6e63', 5); // Dust landing
-            }
-        }
-
-        // Player Slide Logic
-        if (player.isSliding) {
-            player.slideTimer -= dt;
-            if (player.slideTimer <= 0) {
-                player.isSliding = false;
-            }
-        }
-
-        // Spawn Obstacles
-        // Spawn rate depends on speed
-        if (Math.random() < 0.02 + (speed/50000)) {
-            // Ensure we don't spawn too close to last one
-            if (obstacles.length === 0 || obstacles[obstacles.length-1].y > 100) {
-                spawnObstacle();
-            }
-        }
-
-        // Update Obstacles
-        for (let i = obstacles.length - 1; i >= 0; i--) {
-            let obs = obstacles[i];
-            obs.y += speed * dt;
-
-            // Collision Detection
-            // Check Y overlap
-            const playerHitBoxSize = player.width * 0.6;
-            const hitY = Math.abs(obs.y - player.y) < playerHitBoxSize;
+    <div id="game-container">
+        <!-- Header -->
+        <div class="p-6 flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <div class="stat-card">
+                    <span class="text-[10px] uppercase font-bold text-blue-200 block tracking-wider">Score</span>
+                    <span id="score" class="candy-font text-2xl text-white">0</span>
+                </div>
+                <div class="text-center">
+                    <span class="text-[10px] uppercase font-bold text-purple-200 block tracking-wider">Level</span>
+                    <span id="level-num" class="candy-font text-4xl text-white drop-shadow-md">1</span>
+                </div>
+                <div class="stat-card text-right">
+                    <span class="text-[10px] uppercase font-bold text-pink-200 block tracking-wider">Moves</span>
+                    <span id="moves" class="candy-font text-2xl text-white">20</span>
+                </div>
+            </div>
             
-            // For X check, we use the visual X, but give it some leniency
-            const hitX = Math.abs(obs.x - player.x) < (player.width * 0.5);
+            <div class="px-2">
+                <div class="flex justify-between text-xs font-bold text-white mb-2">
+                    <span class="opacity-80">GOAL: <span id="goal-text">1000</span></span>
+                    <span id="percentage-text">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+            </div>
+        </div>
 
-            if (hitY && hitX && !obs.collected) {
-                if (obs.type === 'coin') {
-                    // Collect
-                    obs.collected = true;
-                    coins++;
-                    score += 50;
-                    createParticles(obs.x, obs.y, '#ffd700', 10);
-                } else {
-                    // Hazard
-                    let safe = false;
+        <!-- Grid -->
+        <div id="grid"></div>
+
+        <!-- Footer -->
+        <div class="p-6 flex justify-around">
+            <button onclick="restartGame()" class="p-3 bg-white/10 rounded-2xl hover:bg-white/20 transition-all border border-white/20 shadow-lg group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white group-active:rotate-180 transition-transform duration-500"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+        </div>
+
+        <!-- Overlays -->
+        <div id="overlay" class="hidden">
+            <h2 id="overlay-title" class="candy-font text-5xl mb-4 text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-orange-600">Level Complete!</h2>
+            <p id="overlay-msg" class="text-xl mb-8 font-light tracking-wide opacity-90">Sweet!</p>
+            <button id="overlay-btn" class="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-white candy-font text-2xl px-12 py-4 rounded-full shadow-2xl transform active:scale-95 transition-all border-b-4 border-orange-700">
+                Next Level
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const GRID_SIZE = 8;
+        const CANDY_TYPES = 6;
+        const CANDY_COLORS = ['#FF3B30', '#4CD964', '#007AFF', '#FFCC00', '#AF52DE', '#FF9500'];
+
+        // High Quality Candy SVGs
+        const CANDY_SVGS = [
+            // Red Strawberry/Heart
+            `<svg viewBox="0 0 100 100">
+                <defs>
+                    <radialGradient id="r1" cx="35%" cy="35%" r="60%">
+                        <stop offset="0%" style="stop-color:#FF6B6B" />
+                        <stop offset="100%" style="stop-color:#C92A2A" />
+                    </radialGradient>
+                    <filter id="f1"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="1" dy="1"/></filter>
+                </defs>
+                <path d="M50 85 C50 85 15 60 15 35 A20 20 0 0 1 50 25 A20 20 0 0 1 85 35 C85 60 50 85 50 85Z" fill="url(#r1)" stroke="#800000" stroke-width="2"/>
+                <circle cx="35" cy="35" r="8" fill="white" fill-opacity="0.4" filter="url(#f1)"/>
+                <path d="M30 65 Q50 75 70 65" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.2"/>
+            </svg>`,
+            // Green Jelly Cube
+            `<svg viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#B2F2BB" />
+                        <stop offset="100%" style="stop-color:#2B8A3E" />
+                    </linearGradient>
+                </defs>
+                <rect x="20" y="20" width="60" height="60" rx="12" fill="url(#g1)" stroke="#1a5225" stroke-width="2"/>
+                <path d="M20 32 Q50 20 80 32" fill="none" stroke="white" stroke-width="4" opacity="0.3"/>
+                <rect x="30" y="30" width="15" height="15" rx="4" fill="white" opacity="0.2"/>
+            </svg>`,
+            // Blue Sparkling Gem
+            `<svg viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="b1" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#74C0FC" />
+                        <stop offset="100%" style="stop-color:#1864AB" />
+                    </linearGradient>
+                </defs>
+                <path d="M50 15 L85 50 L50 85 L15 50 Z" fill="url(#b1)" stroke="#0b3d66" stroke-width="2"/>
+                <path d="M50 15 L50 85 M15 50 L85 50" stroke="white" stroke-width="1" opacity="0.3"/>
+                <path d="M30 30 L40 40" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+            </svg>`,
+            // Yellow Lemon Drop
+            `<svg viewBox="0 0 100 100">
+                <defs>
+                    <radialGradient id="y1">
+                        <stop offset="0%" style="stop-color:#FFF3BF" />
+                        <stop offset="100%" style="stop-color:#F59F00" />
+                    </radialGradient>
+                </defs>
+                <ellipse cx="50" cy="50" rx="42" ry="32" fill="url(#y1)" stroke="#9c6600" stroke-width="2"/>
+                <path d="M25 50 Q50 35 75 50" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.4"/>
+                <circle cx="70" cy="40" r="5" fill="white" opacity="0.3"/>
+            </svg>`,
+            // Purple Royal Grape
+            `<svg viewBox="0 0 100 100">
+                <defs>
+                    <radialGradient id="p1">
+                        <stop offset="0%" style="stop-color:#E599F7" />
+                        <stop offset="100%" style="stop-color:#7048E8" />
+                    </radialGradient>
+                </defs>
+                <path d="M50 15 Q85 15 85 50 Q85 85 50 85 Q15 85 15 50 Q15 15 50 15" fill="url(#p1)" stroke="#3b22a1" stroke-width="2"/>
+                <path d="M35 30 A15 15 0 0 1 50 20" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.5"/>
+                <circle cx="65" cy="65" r="10" fill="white" opacity="0.1"/>
+            </svg>`,
+            // Orange Tangy Swirl
+            `<svg viewBox="0 0 100 100">
+                <defs>
+                    <radialGradient id="o1">
+                        <stop offset="0%" style="stop-color:#FFD8A8" />
+                        <stop offset="100%" style="stop-color:#D9480F" />
+                    </radialGradient>
+                </defs>
+                <circle cx="50" cy="50" r="40" fill="url(#o1)" stroke="#862e0b" stroke-width="2"/>
+                <path d="M50 25 A25 25 0 0 1 75 50 A25 25 0 0 1 50 75 A25 25 0 0 1 25 50" fill="none" stroke="white" stroke-width="3" opacity="0.3" stroke-dasharray="10 5"/>
+                <circle cx="40" cy="40" r="6" fill="white" opacity="0.4"/>
+            </svg>`
+        ];
+
+        let state = {
+            grid: [],
+            score: 0,
+            moves: 20,
+            level: 1,
+            goal: 1000,
+            selectedCandy: null,
+            isProcessing: false
+        };
+
+        const gridEl = document.getElementById('grid');
+        const scoreEl = document.getElementById('score');
+        const movesEl = document.getElementById('moves');
+        const levelEl = document.getElementById('level-num');
+        const goalEl = document.getElementById('goal-text');
+        const progressEl = document.getElementById('progress-fill');
+        const percentageEl = document.getElementById('percentage-text');
+        const overlay = document.getElementById('overlay');
+
+        function initGame() {
+            state.score = 0;
+            state.moves = 20 + (state.level * 2);
+            state.goal = state.level * 2500;
+            updateUI();
+            createGrid();
+            overlay.classList.add('hidden');
+        }
+
+        function createGrid() {
+            gridEl.innerHTML = '';
+            state.grid = [];
+            for (let r = 0; r < GRID_SIZE; r++) {
+                state.grid[r] = [];
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    let type;
+                    do {
+                        type = Math.floor(Math.random() * CANDY_TYPES);
+                    } while (
+                        (c > 1 && state.grid[r][c - 1].type === type && state.grid[r][c - 2].type === type) ||
+                        (r > 1 && state.grid[r - 1][c].type === type && state.grid[r - 2][c].type === type)
+                    );
                     
-                    if (obs.type === 'log') {
-                        // Safe if jumping high enough
-                        // Note: z is negative when up
-                        if (player.isJumping && player.z < -20) safe = true;
-                    } 
-                    else if (obs.type === 'arch') {
-                        // Safe if sliding
-                        if (player.isSliding) safe = true;
-                    }
-                    // Fire and Wall are never safe to hit
+                    const candyObj = { r, c, type, el: null };
+                    state.grid[r][c] = candyObj;
+                    renderCandy(candyObj);
+                }
+            }
+        }
 
-                    if (!safe) {
-                        createParticles(player.x, player.y, '#ff0000', 20);
-                        gameOver();
-                        return; // Stop update
+        function renderCandy(candy) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.r = candy.r;
+            cell.dataset.c = candy.c;
+
+            const candyDiv = document.createElement('div');
+            candyDiv.className = 'candy';
+            candyDiv.innerHTML = CANDY_SVGS[candy.type];
+            
+            const handleAction = (e) => {
+                e.preventDefault();
+                handleCandyClick(candy, candyDiv);
+            };
+
+            candyDiv.onclick = handleAction;
+            candyDiv.ontouchstart = handleAction;
+
+            cell.appendChild(candyDiv);
+            gridEl.appendChild(cell);
+            candy.el = candyDiv;
+        }
+
+        async function handleCandyClick(candy, el) {
+            if (state.isProcessing || state.moves <= 0) return;
+
+            if (!state.selectedCandy) {
+                state.selectedCandy = { candy, el };
+                el.classList.add('selected');
+            } else {
+                const prev = state.selectedCandy;
+                const isNeighbor = Math.abs(prev.candy.r - candy.r) + Math.abs(prev.candy.c - candy.c) === 1;
+
+                if (isNeighbor) {
+                    prev.el.classList.remove('selected');
+                    state.selectedCandy = null;
+                    await swapCandies(prev.candy, candy);
+                } else {
+                    prev.el.classList.remove('selected');
+                    state.selectedCandy = { candy, el };
+                    el.classList.add('selected');
+                }
+            }
+        }
+
+        async function swapCandies(c1, c2, checkMatch = true) {
+            state.isProcessing = true;
+            
+            const dR = c2.r - c1.r;
+            const dC = c2.c - c1.c;
+            
+            const anim1 = c1.el.animate([
+                { transform: `translate(${dC * 100}%, ${dR * 100}%) scale(1.1)` },
+                { transform: `translate(${dC * 100}%, ${dR * 100}%) scale(1)` }
+            ], { duration: 300, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' });
+
+            const anim2 = c2.el.animate([
+                { transform: `translate(${-dC * 100}%, ${-dR * 100}%) scale(1.1)` },
+                { transform: `translate(${-dC * 100}%, ${-dR * 100}%) scale(1)` }
+            ], { duration: 300, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' });
+
+            await Promise.all([anim1.finished, anim2.finished]);
+
+            const tempType = c1.type;
+            c1.type = c2.type;
+            c2.type = tempType;
+            c1.el.innerHTML = CANDY_SVGS[c1.type];
+            c2.el.innerHTML = CANDY_SVGS[c2.type];
+
+            if (checkMatch) {
+                const matches = findMatches();
+                if (matches.length > 0) {
+                    state.moves--;
+                    await processMatches();
+                } else {
+                    await swapCandies(c1, c2, false);
+                }
+            }
+            state.isProcessing = false;
+            updateUI();
+            checkGameState();
+        }
+
+        function findMatches() {
+            let matches = new Set();
+
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE - 2; c++) {
+                    let type = state.grid[r][c].type;
+                    if (type !== -1 && type === state.grid[r][c+1].type && type === state.grid[r][c+2].type) {
+                        matches.add(state.grid[r][c]);
+                        matches.add(state.grid[r][c+1]);
+                        matches.add(state.grid[r][c+2]);
                     }
                 }
             }
 
-            // Remove off-screen
-            if (obs.y > canvas.height + 100) {
-                obstacles.splice(i, 1);
+            for (let c = 0; c < GRID_SIZE; c++) {
+                for (let r = 0; r < GRID_SIZE - 2; r++) {
+                    let type = state.grid[r][c].type;
+                    if (type !== -1 && type === state.grid[r+1][c].type && type === state.grid[r+2][c].type) {
+                        matches.add(state.grid[r][c]);
+                        matches.add(state.grid[r+1][c]);
+                        matches.add(state.grid[r+2][c]);
+                    }
+                }
             }
+
+            return Array.from(matches);
         }
 
-        // Update Particles
-        for (let i = particles.length - 1; i >= 0; i--) {
-            let p = particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.life -= dt;
-            if (p.life <= 0) particles.splice(i, 1);
-        }
-        
-        // Update HUD
-        document.getElementById('scoreDisplay').innerText = `DIST: ${Math.floor(score)}`;
-        document.getElementById('coinDisplay').innerText = `${ASSETS.coin} ${coins}`;
-    }
+        async function processMatches() {
+            let matches = findMatches();
+            if (matches.length === 0) return;
 
-    function createParticles(x, y, color, count) {
-        for (let i = 0; i < count; i++) {
-            particles.push({
-                x: x,
-                y: y,
-                vx: (Math.random() - 0.5) * 200,
-                vy: (Math.random() - 0.5) * 200,
-                life: 0.5 + Math.random() * 0.5,
-                color: color,
-                size: Math.random() * 5 + 2
+            state.score += matches.length * 60;
+            updateUI();
+
+            const promises = matches.map(c => {
+                createParticles(c.el, CANDY_COLORS[c.type]);
+                return c.el.animate([
+                    { transform: 'scale(1) rotate(0deg)', opacity: 1 },
+                    { transform: 'scale(1.5) rotate(90deg)', opacity: 0 }
+                ], { duration: 400, easing: 'ease-out' }).finished;
             });
+
+            await Promise.all(promises);
+            matches.forEach(c => c.type = -1);
+            await refillGrid();
+            await processMatches();
         }
-    }
 
-    // --- Rendering ---
+        async function refillGrid() {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                let emptySpots = 0;
+                for (let r = GRID_SIZE - 1; r >= 0; r--) {
+                    if (state.grid[r][c].type === -1) {
+                        emptySpots++;
+                    } else if (emptySpots > 0) {
+                        const targetR = r + emptySpots;
+                        state.grid[targetR][c].type = state.grid[r][c].type;
+                        state.grid[r][c].type = -1;
+                        state.grid[targetR][c].el.innerHTML = CANDY_SVGS[state.grid[targetR][c].type];
+                        state.grid[targetR][c].el.style.opacity = 1;
+                    }
+                }
+                
+                for (let r = 0; r < emptySpots; r++) {
+                    state.grid[r][c].type = Math.floor(Math.random() * CANDY_TYPES);
+                    state.grid[r][c].el.innerHTML = CANDY_SVGS[state.grid[r][c].type];
+                    state.grid[r][c].el.style.opacity = 1;
+                    state.grid[r][c].el.animate([
+                        { transform: 'translateY(-300%) scale(0.5)', opacity: 0 },
+                        { transform: 'translateY(0) scale(1)', opacity: 1 }
+                    ], { duration: 500, easing: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)' });
+                }
+            }
+            await new Promise(r => setTimeout(r, 550));
+        }
 
-    function draw() {
-        // Clear
-        ctx.fillStyle = ASSETS.bg;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Draw Lanes
-        for (let i = 0; i < LANE_COUNT; i++) {
-            ctx.fillStyle = (i % 2 === 0) ? ASSETS.laneLight : ASSETS.laneDark;
-            ctx.fillRect(i * LANE_WIDTH, 0, LANE_WIDTH, canvas.height);
+        function createParticles(el, color) {
+            const rect = el.getBoundingClientRect();
+            const containerRect = gridEl.getBoundingClientRect();
             
-            // Lane dividing lines
-            if(i > 0) {
-                ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.fillRect(i * LANE_WIDTH - 2, 0, 4, canvas.height);
+            for (let i = 0; i < 12; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.width = (4 + Math.random() * 6) + 'px';
+                p.style.height = p.style.width;
+                p.style.backgroundColor = color;
+                p.style.color = color;
+                p.style.left = (rect.left - containerRect.left + rect.width/2) + 'px';
+                p.style.top = (rect.top - containerRect.top + rect.height/2) + 'px';
+                gridEl.appendChild(p);
+
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = 8 + Math.random() * 10;
+                const tx = Math.cos(angle) * 120;
+                const ty = Math.sin(angle) * 120;
+
+                p.animate([
+                    { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+                    { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 }
+                ], { duration: 800, easing: 'ease-out' }).onfinish = () => p.remove();
             }
         }
 
-        // Draw Track Effect (moving lines to simulate speed)
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
-        let trackOffset = (distance % 200);
-        for (let y = trackOffset - 200; y < canvas.height; y += 200) {
-            ctx.fillRect(0, y, canvas.width, 20);
+        function updateUI() {
+            scoreEl.innerText = state.score;
+            movesEl.innerText = state.moves;
+            levelEl.innerText = state.level;
+            goalEl.innerText = state.goal;
+            const progress = Math.min((state.score / state.goal) * 100, 100);
+            progressEl.style.width = progress + '%';
+            percentageEl.innerText = Math.floor(progress) + '%';
         }
 
-        // Draw Shadow for Player
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath();
-        ctx.ellipse(player.x, player.y + 40, player.width/2.5, player.width/5, 0, 0, Math.PI*2);
-        ctx.fill();
-
-        // Sort entities by Y for pseudo-3D overlap (painters algorithm)
-        // We actually just draw obstacles then player usually, but let's be careful
-        // Filter obstacles behind player vs in front?
-        // Actually in 2D top down, things lower Y are usually "closer" but here Y grows downwards.
-        // Things with higher Y are closer to camera (bottom of screen).
-        
-        const renderList = [];
-        
-        // Add obstacles
-        obstacles.forEach(obs => {
-            if(!obs.collected) renderList.push({type: 'obs', data: obs, y: obs.y});
-        });
-        
-        // Add Player
-        renderList.push({type: 'player', data: player, y: player.y});
-
-        // Sort: Lower Y (top of screen/further away) draws first. Higher Y (bottom/closer) draws last.
-        renderList.sort((a, b) => a.y - b.y);
-
-        renderList.forEach(item => {
-            if (item.type === 'player') {
-                drawPlayer();
-            } else {
-                drawObstacle(item.data);
+        function checkGameState() {
+            if (state.score >= state.goal) {
+                showOverlay("Level Complete!", "Tastetastic!", "Next Level", () => {
+                    state.level++;
+                    initGame();
+                });
+            } else if (state.moves <= 0) {
+                showOverlay("Out of Moves!", "So Close!", "Retry Level", () => {
+                    initGame();
+                });
             }
-        });
-
-        // Draw Particles
-        particles.forEach(p => {
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = p.life;
-            ctx.fillRect(p.x, p.y, p.size, p.size);
-            ctx.globalAlpha = 1.0;
-        });
-    }
-
-    function drawPlayer() {
-        // Calculate visuals based on jump/slide
-        let visualY = player.y + player.z; 
-        
-        ctx.font = `${player.width}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        let sprite = ASSETS.player;
-        
-        if (player.isSliding) {
-            // Flatten or rotate for slide
-            ctx.save();
-            ctx.translate(player.x, visualY);
-            ctx.rotate(-Math.PI / 2); // Lay down
-            ctx.fillText(sprite, 0, 0);
-            ctx.restore();
-        } else {
-            // Bobbing animation if running
-            let bob = 0;
-            if (!player.isJumping) {
-                bob = Math.sin(distance * 0.1) * 5;
-            }
-            ctx.fillText(sprite, player.x, visualY + bob);
-        }
-    }
-
-    function drawObstacle(obs) {
-        ctx.font = `${obs.width}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        let sprite = '';
-        switch(obs.type) {
-            case 'coin': sprite = ASSETS.coin; break;
-            case 'log': sprite = ASSETS.log; break;
-            case 'arch': sprite = ASSETS.arch; break;
-            case 'fire': sprite = ASSETS.fire; break;
-            default: sprite = ASSETS.wall;
         }
 
-        // Scale effect as they get closer (fake perspective)
-        // Let's keep it simple 2D for now to ensure hitbox accuracy visually
-        ctx.fillText(sprite, obs.x, obs.y);
-    }
+        function showOverlay(title, msg, btnText, callback) {
+            document.getElementById('overlay-title').innerText = title;
+            document.getElementById('overlay-msg').innerText = msg;
+            const btn = document.getElementById('overlay-btn');
+            btn.innerText = btnText;
+            btn.onclick = callback;
+            overlay.classList.remove('hidden');
+        }
 
-    // --- Loop ---
+        function restartGame() {
+            state.level = 1;
+            initGame();
+        }
 
-    function gameLoop(timestamp) {
-        if (!gameRunning) return;
-
-        let dt = (timestamp - lastTime) / 1000;
-        lastTime = timestamp;
-        
-        // Cap dt to prevent huge jumps on lag
-        if (dt > 0.1) dt = 0.1;
-
-        update(dt);
-        draw();
-
-        requestAnimationFrame(gameLoop);
-    }
-
-    // Initial Draw
-    ctx.fillStyle = ASSETS.bg;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-</script>
+        window.onload = initGame;
+    </script>
 </body>
 </html>
